@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 import os
 import re
+import time
 import redis
 import codecs
 REGEX_MESSAGE=re.compile('(?P<action>(\+|\-)?)'+'(?P<rt_prefix>\d\d?\d?\.\d\d?\d?\.\d\d?\d?\.\d\d?\d?\/\d\d?)', re.MULTILINE)
 NEXT_HOP='127.0.0.1'
 COMMUNITY_PREFIX='65432:'
-data_dir='./raw/'
+data_dir='./raw'
 def get_action(action):
     if not action:
         return 'announce'
@@ -38,12 +39,18 @@ def load_dir(data_dir):
 
 
 #!!!!!!!!!!!!!!!!!!!!TEST
-r = redis.StrictRedis(host='localhost', port=6379, db=7)
+r = redis.Redis(host='localhost', port=6379, db=7)
+pipe = r.pipeline()
 r.flushdb()                                                                                                                           
 msgs = load_dir(data_dir)
 for community in msgs.keys():
+    count = 0
     for msg in msgs[community]:
+        count += 1
         transaction=community+':'+msg
-        r.rpush('messages',transaction)
-
+        pipe.rpush('messages',transaction)
+        if count % 1000 == 0:
+            pipe.execute()
+            count = 0
+    pipe.execute()
 
