@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import re
-import time
 import redis
 import codecs
 REGEX_MESSAGE=re.compile('(?P<action>(\+|\-)?)'+'(?P<rt_prefix>\d\d?\d?\.\d\d?\d?\.\d\d?\d?\.\d\d?\d?\/\d\d?)', re.MULTILINE)
@@ -39,8 +38,12 @@ def load_dir(data_dir):
 
 
 #!!!!!!!!!!!!!!!!!!!!TEST
+r = redis.StrictRedis(host='localhost', port=6379, db=7)
+r.flushdb()                                                                                                                           
 msgs = load_dir(data_dir)
 for community in msgs.keys():
     for msg in msgs[community]:
-        print(community, msg)
+        transaction=community+':'+msg
+        r.rpush('messages',transaction)
+
 
